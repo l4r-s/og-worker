@@ -11,7 +11,7 @@
 			"confettisaas.com",
 			"www.confettisaas.com"
 		],
-		"SCREENSHOT_TIMEOUT_MS": 25000
+		"SCREENSHOT_TIMEOUT_MS": 6000
 	},
 	"browser": {
 		"binding": "BROWSER"

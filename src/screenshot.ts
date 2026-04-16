@@ -35,7 +35,7 @@ export async function takeOgScreenshot(
         deviceScaleFactor: DEVICE_SCALE_FACTOR,
       })
 
-      await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: timeoutMs })
+      await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: timeoutMs })
 
       const bytes = (await page.screenshot({
         type: 'webp',
@@ -52,7 +52,7 @@ export async function takeOgScreenshot(
       deviceScaleFactor: 1,
     })
 
-    await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: timeoutMs })
+    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: timeoutMs })
 
     const el = await page.$(SCREENSHOT_SELECTOR)
     if (!el) throw new Error('missing_screenshot_element')
