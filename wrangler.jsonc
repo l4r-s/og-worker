@@ -19,7 +19,7 @@
 	"r2_buckets": [
 		{
 			"bucket_name": "og-worker-images",
-			"binding": "og_worker_images"
+			"binding": "OG_BUCKET"
 		}
 	],
 	"observability": {

@@ -1,6 +1,6 @@
 import { isAllowedHostname } from './allowlist'
 import { buildR2Key } from './keys'
-import { takeOgScreenshot } from './screenshot'
+import { takeOgScreenshot, type OgMode } from './screenshot'
 
 function toHex(bytes: ArrayBuffer): string {
   return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('')
@@ -17,10 +17,10 @@ function withCacheHeaders(headers: Headers, etag: string) {
   headers.set('ETag', `"${etag}"`)
 }
 
-function extractTargetUrlFromRequest(request: Request): URL {
+function extractTargetUrlFromRequest(request: Request, prefix: '/s/' | '/i/'): URL {
   const incoming = new URL(request.url)
-  // rawPath includes the literal /og/ prefix, and we need to preserve any `?query` meant for the target URL.
-  const suffix = incoming.pathname.startsWith('/og/') ? incoming.pathname.slice(4) : ''
+  // rawPath includes the literal route prefix, and we need to preserve any `?query` meant for the target URL.
+  const suffix = incoming.pathname.startsWith(prefix) ? incoming.pathname.slice(prefix.length) : ''
   let raw = `${suffix}${incoming.search}`
 
   if (!raw) throw new Error('missing_target_url')
@@ -39,6 +39,7 @@ function extractTargetUrlFromRequest(request: Request): URL {
 export async function handleOgRequest(
   request: Request,
   env: CloudflareBindings,
+  mode: OgMode,
 ): Promise<Response> {
   const cached = await caches.default.match(request)
   if (cached) {
@@ -49,7 +50,7 @@ export async function handleOgRequest(
 
   let target: URL
   try {
-    target = extractTargetUrlFromRequest(request)
+    target = extractTargetUrlFromRequest(request, mode === 's' ? '/s/' : '/i/')
   } catch {
     return new Response('Missing or invalid URL', {
       status: 400,
@@ -71,7 +72,7 @@ export async function handleOgRequest(
     })
   }
 
-  const key = await buildR2Key(target)
+  const key = await buildR2Key(target, mode)
   const existing = await env.OG_BUCKET.get(key)
   if (existing) {
     const headers = new Headers()
@@ -92,8 +93,15 @@ export async function handleOgRequest(
 
   let screenshot
   try {
-    screenshot = await takeOgScreenshot(env.BROWSER, target.toString(), timeoutMs)
-  } catch {
+    screenshot = await takeOgScreenshot(env.BROWSER, target.toString(), timeoutMs, mode)
+  } catch (err) {
+    if (err instanceof Error && err.message === 'missing_screenshot_element') {
+      return new Response('Missing #screenshot element', {
+        status: 502,
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
+
     return new Response('Failed to render', {
       status: 502,
       headers: { 'Cache-Control': 'no-store' },
