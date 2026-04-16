@@ -1,0 +1,28 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "og-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-04-16",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"vars": {
+		"ALLOWED_HOSTS": [
+			"confettisaas.com",
+			"www.confettisaas.com"
+		],
+		"SCREENSHOT_TIMEOUT_MS": 25000
+	},
+	"browser": {
+		"binding": "BROWSER"
+	},
+	"r2_buckets": [
+		{
+			"bucket_name": "og-worker-images",
+			"binding": "og_worker_images"
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
+}
