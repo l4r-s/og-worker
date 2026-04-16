@@ -2,27 +2,44 @@
 
 Cloudflare Worker that serves OpenGraph images from R2.
 
-- `GET /og/<target-url>` returns a **1200×630** screenshot (WebP) of `target-url`
-- If it already exists, it’s served from **R2**
-- If missing, it’s generated with **Browser Rendering** (Puppeteer), stored in **R2**, and cached at the edge for **1 day**
+Two modes:
+
+- `GET /s/<target-url>` — **screen** mode: screenshots the page rendered at a 1920px desktop width, scaled to **1200×630** (WebP). Use for any normal page.
+- `GET /i/<target-url>` — **island** mode: screenshots **only** the element with `id="screenshot"` at its intrinsic size (no dimension enforcement). Use when the target page already renders an OG-optimized card.
+
+Delivery:
+
+- If the image already exists in **R2**, it’s served from there.
+- If missing, it’s generated with **Browser Rendering** (Puppeteer), stored in **R2**, and cached at the edge for **1 day**.
 
 ## API
 
 ### Request format
 
-`GET /og/<target-url>`
+`GET /s/<target-url>` or `GET /i/<target-url>`
 
 Examples:
 
-- `GET /og/https://example.com/`
-- `GET /og/https://example.com/path?q=1`
-- Encoded form also works: `GET /og/https%3A%2F%2Fexample.com%2Fpath`
+- `GET /s/https://example.com/`
+- `GET /s/https://example.com/path?q=1`
+- `GET /i/https://example.com/og/card?title=Hello`
+- Encoded form also works: `GET /s/https%3A%2F%2Fexample.com%2Fpath`
+
+`/s/` and `/i/` have disjoint R2 cache spaces (keys are prefixed with `s/` or `i/`), so requesting the same target URL under both modes is safe and produces independent cached images.
 
 ### Response headers
 
 - `Cache-Control: public, max-age=86400, immutable`
 - `CDN-Cache-Control: public, max-age=86400`
 - `X-OG-Source: cache-hit | r2-hit | generated`
+
+### Error responses
+
+- `400 Missing or invalid URL` — couldn’t parse a target URL from the path
+- `400 Invalid protocol` — target URL is not `http:` or `https:`
+- `400 Domain not allowed` — target hostname is not in `ALLOWED_HOSTS`
+- `502 Failed to render` — target page didn’t load in time or errored
+- `502 Missing #screenshot element` — `/i/` mode couldn’t find `#screenshot` in the DOM when `networkidle0` fired
 
 ## Setup
 
